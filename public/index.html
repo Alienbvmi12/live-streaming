@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Streaming</title>
+</head>
+
+<body>
+  <div id="result-container"></div>
+  <video id="video" width="640" height="480" autoplay></video>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const test_container = document.getElementById("result-container");
+    var getUrl = window.location;
+    var base_url = getUrl.protocol + "//" + getUrl.host + "/";
+
+    socket.emit("streaming-list", 0);
+    socket.on("streaming-list", data => {
+      test_container.innerHTML = "";
+      Array.from(data).forEach(value => {
+        test_container.innerHTML += `<a href="`+base_url+`watch?id=`+ value +`"><button>Stream `+value+`</button></a>`
+      });
+    });
+  </script>
+</body>
+
+</html>

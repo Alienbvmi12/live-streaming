@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Streaming</title>
+</head>
+
+<body>
+  <div id="result-container"></div>
+  <img id="video" width="640" height="480">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // const video = document.getElementById('video');
+    // const mediaSource = new MediaSource();
+    // video.src = URL.createObjectURL(mediaSource);
+    const test_container = document.getElementById("result-container");
+
+    // Get the current URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Create an object to store the parameters
+    const paramsObject = {};
+
+    // Iterate over each parameter and add it to the object
+    for (const [key, value] of urlParams) {
+      paramsObject[key] = value;
+    }
+
+    // const videoBuffer = [];
+
+    function sendData() {
+      let message = document.getElementById("message").value;
+      socket.emit("video-stream", message);
+    }
+
+    function binaryToBase64(binaryData) {
+      var bytes = new Uint8Array(binaryData);
+      var binaryString = String.fromCharCode.apply(null, bytes);
+      var base64String = btoa(binaryString);
+
+      return base64String;
+    }
+
+    if (typeof paramsObject.id !== 'undefined') {
+      const video = document.getElementById('video');
+      const mediaSource = new MediaSource();
+
+      // video.src = URL.createObjectURL(mediaSource);
+
+      // mediaSource.addEventListener('sourceopen', function () {
+      // const sourceBuffer = mediaSource.addSourceBuffer('video/mp4;codecs="avc1.64001e');
+      socket.on(paramsObject.id, (data) => {
+        //   if (mediaSource.readyState === 'open') {
+        //     videoBuffer.push(data);
+        //     if (!video.updating) {
+        //       appendBuffer();
+        //     }
+        //   }
+        // sourceBuffer.appendBuffer(data);
+        video.src = data;
+        // console.log(sourceBuffer)
+        // let blob = URL.createObjectURL(data);
+        // // let url = URL.createObjectURL(blob);
+        // document.getElementById("video").src = blob;
+      });
+      // });
+
+      video.addEventListener('canplay', function () {
+        video.play();
+      });
+
+      socket.emit(paramsObject.id, "init");
+    }
+    else {
+      alert("undifined");
+    }
+
+    function initVideo(buffer) {
+      const video = document.getElementById('video');
+      const mediaSource = new MediaSource();
+
+      video.src = URL.createObjectURL(mediaSource);
+
+      mediaSource.addEventListener('sourceopen', function () {
+        const sourceBuffer = mediaSource.addSourceBuffer('video/3gp');
+
+        sourceBuffer.addEventListener('updateend', function () {
+          // You can check if there's more data in the buffer and append it if needed
+          // For simplicity, this example only appends the buffer once
+          if (!sourceBuffer.updating && buffer.length > 0) {
+            sourceBuffer.appendBuffer(buffer.shift());
+          }
+        });
+
+        // Append the initial buffer
+        sourceBuffer.appendBuffer(buffer.shift());
+      });
+
+      video.addEventListener('canplay', function () {
+        video.play();
+      });
+    }
+
+    function appendBuffer() {
+      const sourceBuffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8"');
+      if (videoBuffer.length > 0) {
+        sourceBuffer.appendBuffer(videoBuffer.shift());
+      }
+    }
+  </script>
+</body>
+
+</html>

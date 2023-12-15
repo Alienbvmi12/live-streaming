@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Streaming</title>
+</head>
+
+<body>
+    <div id="result-container"></div>
+    <input type="text" id="message">
+    <video id="video" width="640" height="480" autoplay></video>
+    <img id="frames" width="640" height="480">
+    <button onclick="sendData()">Send</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.0.3/pako.min.js"></script>
+
+    <!-- <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script> -->
+    <!-- <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script src="https://cdn.rawgit.com/webrtc/evac/3918aa4/dist/evac.es5.min.js"></script> -->
+    <script>
+        let socket;
+
+        var getUrl = window.location;
+        var base_url = getUrl.protocol + "//" + getUrl.host + "/";
+        let stream_id = "";
+
+
+        socket = io();
+
+        // Set up WebRTC connection
+        const peerConnection = new RTCPeerConnection();
+
+        // Set up media constraints for video
+        const mediaConstraints = { video: true };
+
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        var video = document.querySelector('video');
+
+        // Get user media
+        navigator.mediaDevices.getUserMedia(mediaConstraints)
+            .then((stream) => {
+                video.srcObject = stream;
+                video.onloadedmetadata = function (ev) {
+                    video.play();
+                };
+                video.style.transform = 'scaleX(-1)';
+                // Add the local stream to the peer connection
+
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    let imgURL = showFramesToImage();
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                        console.log(imgURL);
+                        socket.emit(stream_id, imgURL);
+                    }
+                };
+
+                socket.emit("streamer-init", "");
+
+            })
+            .catch(error => console.error('getUserMedia error:', error));
+
+        function base64ToBinary(base64String) {
+            var binaryString = atob(base64String);
+            var len = binaryString.length;
+            var bytes = new Uint8Array(len);
+
+            for (var i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            return bytes;
+        }
+
+        function compressBase64(base64Image) {
+            let base64Array = base64Image.split("base64,");
+            const binaryImageData = atob(base64Array[base64Array.length - 1]);
+
+            // Compress the binary data
+            const compressedData = pako.deflate(binaryImageData, { to: 'string' });
+
+            // Encode the compressed data back to Base64
+            const compressedBase64Image = btoa(compressedData);
+
+            return base64Array[0] + "base64," + compressedBase64Image;
+        }
+        function showFramesToImage() {
+            var canvas = document.createElement('canvas');
+            var context = canvas.getContext('2d');
+            canvas.width = 150;
+            canvas.height = 110;
+            // Draw the video frame to the canvas
+            context.scale(-1, 1);
+            context.drawImage(document.getElementById('video'), -canvas.width, 0, canvas.width, canvas.height);
+
+            // Convert the canvas to a data URL
+            var dataURL = canvas.toDataURL('image/jpg');
+            console.log(dataURL);
+
+            document.getElementById("frames").src = dataURL;
+            return dataURL;
+        }
+
+        socket.on("streamer-init", data => {
+            stream_id = data;
+            socket.on(stream_id, data => {
+
+            });
+        });
+
+        socket.on('streaming-started', (filePath) => {
+            // Start recording when the server signals that streaming has started
+            mediaRecorder.start(150);
+        });
+
+        const test_container = document.getElementById("result-container");
+
+        function sendData() {
+            let message = document.getElementById("message").value;
+            console.log(stream_id);
+            socket.emit(stream_id, message);
+        }
+
+        function startCam() {
+
+        }
+
+    </script>
+</body>
+
+</html>
